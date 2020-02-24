@@ -13,6 +13,7 @@
 #include <geometry_msgs/Vector3.h>
 #include <sensor_msgs/Joy.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <stdio.h>      /* printf, fgets */
 #include <stdlib.h>     /* atoi */
 #include "climb3/DynamixelCommand.h"
@@ -35,12 +36,12 @@ string  updown2_port="/dev/ttyUSB3";
 char key(' ');
 double speed_robot=20;
 
-int32_t servo1_val1=0;
-int32_t servo1_val2=0;
-int32_t servo1_val3=276000;
-int32_t servo1_val4=-135000;
-int32_t servo1_val5=0;
-int32_t servo1_val6=85000;
+int32_t servo1_val1=0;  // joint 6
+int32_t servo1_val2=0;  // joint 5
+int32_t servo1_val3=276000; // joint 4
+int32_t servo1_val4=-135000;  // joint 3
+int32_t servo1_val5=0;      // joint 2
+int32_t servo1_val6=85000;  // joint 1
 
 int32_t targetJointPos1=0;
 int32_t targetJointPos2=0;
@@ -49,7 +50,7 @@ int32_t targetJointPos4=0;
 int32_t targetJointPos5=0;
 int32_t targetJointPos6=0;
 
-bool change = false;
+bool change = true;
 
 // For non-blocking keyboard inputs - get a char from keyboard
 int getch(void)
@@ -211,15 +212,24 @@ int setupserial()
 void jointState_wormingCallback(const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
   // Eigen::VectorXd jointstate;
+  std::cout << "receiving the joint position - outside the loop" << std::endl;
   for (int i=0; i<6;i++)
   {
-    if (i==0) targetJointPos1 = int32_t(msg->position[i]*500000/3.141592653);
-    if (i==1) targetJointPos2 = int32_t(msg->position[i]*500000/3.141592653);
-    if (i==2) targetJointPos3 = int32_t(msg->position[i]*500000/3.141592653);
-    if (i==3) targetJointPos4 = int32_t(msg->position[i]*500000/3.141592653);
-    if (i==4) targetJointPos5 = int32_t(msg->position[i]*500000/3.141592653);
-    if (i==5) targetJointPos6 = int32_t(msg->position[i]*500000/3.141592653);
+    if (i==0) targetJointPos1 = int32_t(msg->data[i]*500000/3.141592653);
+    if (i==1) targetJointPos2 = int32_t(msg->data[i]*500000/3.141592653);
+    if (i==2) targetJointPos3 = int32_t(msg->data[i]*500000/3.141592653);
+    if (i==3) targetJointPos4 = int32_t(msg->data[i]*500000/3.141592653);
+    if (i==4) targetJointPos5 = int32_t(msg->data[i]*500000/3.141592653);
+    if (i==5) targetJointPos6 = int32_t(msg->data[i]*500000/3.141592653);
+    // targetJointPos3 = 5000;
+    // targetJointPos4 = -5000;
+    std::cout << "receiving the joint position" << std::endl;
   }
+  // targetJointPos2 = 0;
+  // targetJointPos3 = 0;
+  // targetJointPos5 = 0;
+  // targetJointPos6 = 0;
+  // targetJointPos1 = 0;
   change = true;
 }
 
@@ -229,100 +239,207 @@ int main(int argc, char** argv)
   // Init ROS node
   ros::init(argc, argv, "Robot_control");
   ros::NodeHandle nh;
-  //ros::ServiceClient client = nh.serviceClient<dynamixel_workbench_msgs::DynamixelCommand>("dynamixel_workbench_msgs/DynamixelCommand");
+  
   // Init cmd_vel publisher
-  ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-  geometry_msgs::Twist twist;
+  // ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+  // geometry_msgs::Twist twist;
   ros::ServiceClient client = nh.serviceClient<climb3::DynamixelCommand>("/dynamixel_workbench/dynamixel_command");
   climb3::DynamixelCommand srv;
   setupserial();
-  int mode=0;
+  ros::Rate loop_rate(25);
+  // int mode=0;
   
-  ros::Subscriber tra_sub = nh.subscribe("/jointState_worming", 5, jointState_wormingCallback);
-  // ros::Publisher jp_pub = node_handle.advertise<std_msgs::Float64MultiArray>("trajectorySet", 1);
+  ros::Subscriber tra_sub = nh.subscribe("/trajectory_processing/jointState_worming", 5, jointState_wormingCallback);
+  bool worming_mode = true;
+  bool mobile_mode = false;
+  bool switching_controller = true;
+  bool area_check = false, plane_check = false, height = false;
 
-  while(ros::ok()){
+  while(ros::ok())
+  {
 
-    // Get the pressed key
-    key = getch();
-    cout<<key<<endl;
-    if(key=='1') {sendData(3,"M",200);cout<<"send 200 to updown1"<<endl;}
-    if(key=='2') {sendData(3,"M",-200);cout<<"send -200 to updown1"<<endl;}
-    if(key=='3') {sendData(3,"M",0);cout<<"send 0 to updown1"<<endl;}
-    if(key=='4') {sendData(4,"M",200);cout<<"send 200 to updown2"<<endl;}
-    if(key=='5') {sendData(4,"M",-200);cout<<"send -200 to updown2"<<endl;}
-    if(key=='6') {sendData(4,"M",0);cout<<"send 0 to updown2"<<endl;}
-
-    if(key=='+') {cout<<"tang speed"<<speed_robot<<endl;speed_robot++;}
-    if(key=='-') {cout<<"giam speed"<<speed_robot<<endl;speed_robot--;}
-    if(key=='o') {move_toi();cout<<"toi"<<endl;}
-    else if(key=='l') {move_lui();cout<<"lui"<<endl;}
-    else if(key=='k') {move_trai();cout<<"trai"<<endl;}
-    else if(key==';') {move_phai();cout<<"phai"<<endl;}
-    else {stop();cout<<"stop"<<endl;}
-    
-    // int x=500, x2=100, x3=50;
-    // // for motor 1
-    // if(key=='q')      {mode=1;servo1_val1=servo1_val1+x; if(servo1_val1>targetJointPos1)  servo1_val1=targetJointPos1;cout<<servo1_val1<<endl;}
-    // else if(key=='a') {mode=1;servo1_val1=servo1_val1-x; if(servo1_val1<-targetJointPos1) servo1_val1=-targetJointPos1;cout<<servo1_val1<<endl;}
-    // // for motor 2
-    // if(key=='w')      {mode=2;servo1_val2=servo1_val2+x; if(servo1_val2 > targetJointPos2)  servo1_val2 = targetJointPos2; cout<<servo1_val2<<endl;}
-    // else if(key=='s') {mode=2;servo1_val2=servo1_val2-x; if(servo1_val2 < -targetJointPos2) servo1_val2 = -targetJointPos2; cout<<servo1_val2<<endl;}
-    // // for motor 3
-    // if(key=='e')      {mode=3;servo1_val3=servo1_val3+x; if(servo1_val3> targetJointPos3)  servo1_val3 = targetJointPos3; cout<<servo1_val3<<endl;}
-    // else if(key=='d') {mode=3;servo1_val3=servo1_val3-x; if(servo1_val3< -targetJointPos3) servo1_val3 = -targetJointPos3; cout<<servo1_val3<<endl;}
-    // // for motor 4
-    // if(key=='r')      {mode=4;servo1_val4=servo1_val4+x; if(servo1_val4 > targetJointPos4)  servo1_val4 = targetJointPos4; cout<<servo1_val4<<endl;}
-    // else if(key=='f') {mode=4;servo1_val4=servo1_val4-x; if(servo1_val4< -targetJointPos5) servo1_val4 = -targetJointPos4; cout<<servo1_val4<<endl;}
-    // // for motor 5
-    // if(key=='t')      {mode=5;servo1_val5=servo1_val5+x; if(servo1_val5 > targetJointPos5)  servo1_val5 = targetJointPos5; cout<<servo1_val5<<endl;}
-    // else if(key=='g') {mode=5;servo1_val5=servo1_val5-x; if(servo1_val5 < -targetJointPos5) servo1_val5 = -targetJointPos5;cout<<servo1_val5<<endl;}
-    // // for motor 6
-    // if(key=='y')      {mode=6;servo1_val6=servo1_val6+x; if(servo1_val6 > targetJointPos6)  servo1_val6 = targetJointPos6; cout<<servo1_val6<<endl;}
-    // else if(key=='h') {mode=6;servo1_val6=servo1_val6-x; if(servo1_val6 < -targetJointPos6) servo1_val6 = -targetJointPos6; cout<<servo1_val6<<endl;}
-    // cout<<"mode "<<mode<<endl;
-    
-    // if(mode!=0){
-    //   srv.request.command="";
-    //   srv.request.id=mode;
-    //   srv.request.addr_name="Goal_Position";
-    //   if(mode==1) srv.request.value=servo1_val1;
-    //   else if(mode==2) srv.request.value=servo1_val2;
-    //   else if(mode==3) srv.request.value=servo1_val3;
-    //   else if(mode==4) srv.request.value=servo1_val4;
-    //   else if(mode==5) srv.request.value=servo1_val5;
-    //   else if(mode==6) srv.request.value=servo1_val6;
-    //   client.call(srv);
+    // the switching controller
+    // if (switching_controller)
+    // {
+    //   // asking service to process the point cloud to return area_check, plane_check, height_check
+    //   bool switching = false;
+    //   bool keep_working = false;
+    //   keep_working = area_check*plane_check;
+    //   if (keep_working)
+    //   {
+    //     switching = height;
+    //     if (switching)
+    //       mobile_mode = true;
+    //     else
+    //       worming_mode = true;
+    //   }
     // }
 
-    if (change)
+    if (mobile_mode)
     {
-      for (int j = 0; j < 6; j++)
+      std::cout << "The mobile mode is turned on " << std::endl;
+      switching_controller = true;
+      mobile_mode = false;
+      // asking a service to take a point cloud data
+      // taking a picture - asking a service
+
+    }
+    if (worming_mode)
+    {
+      // asking a service to have a pointcloud  --------------------------------------------
+      // asking another service to process a point cloud to have Pose ---------------------------------
+      bool convPose_state = true, move_1leg = false, move_2leg = false;
+      Eigen::MatrixXd trajectory1(6,6);
+      trajectory1(0,0) = -1617;
+      trajectory1(0,1) = -25;
+      trajectory1(0,2) = 2948;
+      trajectory1(0,3) = -2207;
+      trajectory1(0,4) = 49;
+      trajectory1(0,5) = -1577;
+
+      trajectory1(1,0) = -15011;
+      trajectory1(1,1) = -236;
+      trajectory1(1,2) = 27365;
+      trajectory1(1,3) = -20488;
+      trajectory1(1,4) = 456;
+      trajectory1(1,5) = -14638;
+
+      trajectory1(2,0) = -41203;
+      trajectory1(2,1) = -648;
+      trajectory1(2,2) = 75114;
+      trajectory1(2,3) = -56237;
+      trajectory1(2,4) = 1252;
+      trajectory1(2,5) = -40179;
+      
+      trajectory1(3,0) = -67393;
+      trajectory1(3,1) = -1060;
+      trajectory1(3,2) = 122857;
+      trajectory1(3,3) = -91982;
+      trajectory1(3,4) = 2049;
+      trajectory1(3,5) = -65718;
+
+      trajectory1(4,0) = -93454;
+      trajectory1(4,1) = -1471;
+      trajectory1(4,2) = 170366;
+      trajectory1(4,3) = -127553;
+      trajectory1(4,4) = 2841;
+      trajectory1(4,5) = -91131;
+
+      trajectory1(5,0) = -104507;
+      trajectory1(5,1) = -1645;
+      trajectory1(5,2) = 190515;
+      trajectory1(5,3) = -142639;
+      trajectory1(5,4) = 3177;
+      trajectory1(5,5) = -101909;
+
+      int32_t convPos_joint1=0, convPos_joint3=-30000, convPos_joint4=60000;
+
+      
+      // move down permanent magnet of the second leg ---------------------------------------
+      // move up permanent magnet of the first leg -------------------------------------------
+
+      // moving to the convenient Pose
+      if (convPose_state)
       {
         srv.request.command="";
-        srv.request.id=j+1;
-        srv.request.addr_name="jointPosition";
-
-        if(j==0) srv.request.value = targetJointPos1;
-        if(j==1) srv.request.value = targetJointPos2;
-        if(j==2) srv.request.value = targetJointPos3;
-        if(j==3) srv.request.value = targetJointPos4;
-        if(j==4) srv.request.value = targetJointPos5;
-        if(j==5) srv.request.value = targetJointPos6;
+        srv.request.addr_name="Goal_Position";
+        // moving the joint 1 the base joint - first
+        srv.request.id=6;
+        srv.request.value = convPos_joint1;
         client.call(srv);
-      }
-      change = false;
-    }
-    mode=0;
-    if (key == '\x03')
+        //moving the joint 3 - the second
+        srv.request.id=4;
+        srv.request.value = convPos_joint3;
+        client.call(srv);
+        //moving the joint 4 - the last
+        srv.request.id=3;
+        srv.request.value = convPos_joint4;
+        client.call(srv);
+        // move_1leg = true;
+        convPose_state = false;
+      }    
+
+      if (move_1leg)
       {
-        printf("\n\n                 .     .\n              .  |\\-^-/|  .    \n             /| } O.=.O { |\\\n\n                 CH3EERS\n\n");
-        break;
+        for (int k = 0; k<6; k++)
+          for (int j = 0; j < 6; j++)
+          {
+            srv.request.command="";
+            srv.request.id=j+1;
+            srv.request.addr_name="Goal_Position";
+
+            if(j==0) srv.request.value = trajectory1(k,5);  // joint 6   - counter clockwise - positive
+            if(j==1) srv.request.value = trajectory1(k,4);  // joint 5  - counter clockwise - positive
+            if(j==2) srv.request.value = -trajectory1(k,3); // joint 4   - clockwise - positive
+            if(j==3) srv.request.value = trajectory1(k,2);  // joint 3   - counter clockwise - positive
+            if(j==4) srv.request.value = trajectory1(k,1);  // joint 2    - counter clockwise - positive
+            if(j==5) srv.request.value = -trajectory1(k,0); // joint 1    - clockwise - positive
+            client.call(srv);
+          }
+        move_2leg = true;
+        move_1leg = false;       
       }
-    // Publish it and resolve any remaining callbacks
-    pub.publish(twist);
+      
+      // move down the permanent magnet of the first leg ---------------------------------------------------
+      // move up the permanent magnet of the second leg ----------------------------------------------------
+
+      // moving to the initial Pose
+      if (move_2leg)
+      {
+        srv.request.command="";
+        srv.request.addr_name="Goal_Position";
+        // moving the joint 1 the base joint - first
+        srv.request.id=6;
+        srv.request.value = servo1_val6;
+        client.call(srv);
+        //moving the joint 3 - the second
+        srv.request.id=4;
+        srv.request.value = servo1_val4;
+        client.call(srv);
+        //moving the joint 4 - the last
+        srv.request.id=3;
+        srv.request.value = servo1_val3;
+        client.call(srv);
+        move_2leg = false;
+      }
+      switching_controller = true;
+      worming_mode = false;
+
+      // move down the permanent magnet of the second leg ---------------------------------------------------
+    }
+
+    // if (change)
+    // {
+    //   // std::cout << "Is there any time the algorithm go inside here??"  << std::endl;
+    //   for (int j = 0; j < 6; j++)
+    //   {
+    //     srv.request.command="";
+    //     srv.request.id=j+1;
+    //     srv.request.addr_name="Goal_Position";
+
+    //     if(j==0) srv.request.value = targetJointPos6;  // joint 6   - counter clockwise - positive
+    //     if(j==1) srv.request.value = targetJointPos5;  // joint 5  - counter clockwise - positive
+    //     if(j==2) srv.request.value = -targetJointPos4; // joint 4   - clockwise - positive
+    //     if(j==3) srv.request.value = targetJointPos3;  // joint 3   - counter clockwise - positive
+    //     if(j==4) srv.request.value = targetJointPos2;  // joint 2    - counter clockwise - positive
+    //     if(j==5) srv.request.value = -targetJointPos1; // joint 1    - clockwise - positive
+        
+    //     // if(j==5) srv.request.value = 85000;   // joint 1    - clockwise - positive
+    //     // if(j==4) srv.request.value = 0;       // joint 2    - counter clockwise - positive
+    //     // if(j==3) srv.request.value = -135000;  // joint 3   - counter clockwise - positive
+    //     // if(j==2) srv.request.value = 276000;  // joint 4    - clockwise - positive
+    //     client.call(srv);
+    //   }
+    //   change = false;
+    // }
+
+
+    
     ros::spinOnce();
+    loop_rate.sleep();
+
   }
+  // ros::spinOnce();
 
   return 0;
 }
