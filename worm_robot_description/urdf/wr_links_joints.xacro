@@ -1,0 +1,73 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    
+    <xacro:macro name="m_joint" params="name type axis_xyz origin_xyz origin_rpy parent child limit_u limit_l">
+        <joint name="${name}" type="${type}">
+            <axis xyz="${axis_xyz}" />
+            <limit effort="500.0" lower="${limit_l}" upper="${limit_u}" velocity="0.5" />
+            <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+            <parent link="${parent}" />
+            <child link="${child}" />
+        </joint>
+    </xacro:macro>
+
+    <xacro:macro name="m_link_cylinder" params="name origin_xyz origin_rpy radius length mass ixx ixy ixz iyy iyz izz">
+        <link name="${name}">
+            <inertial>
+                <mass value="${mass}" />
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/> 
+            </inertial>
+            
+            <collision>
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <geometry>
+                    <cylinder radius="${radius}" length="${length}" />
+                </geometry>
+                <material name="silver">
+                    <color rgba="0.75 0.75 0.75 1"/>
+                </material>
+            </collision>
+            
+            <visual>
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <geometry>
+                    <cylinder radius="${radius}" length="${length}" />
+                </geometry>
+                <material name="silver">
+                    <color rgba="0.75 0.75 0.75 1"/>
+                </material>
+            </visual>
+        </link>
+    </xacro:macro>   
+
+    <xacro:macro name="m_link_box" params="name origin_rpy origin_xyz size mass ixx ixy ixz iyy iyz izz">
+        <link name="${name}">
+            <inertial>
+                <mass value="${mass}" />
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}"/> 
+            </inertial>
+            
+            <collision>
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <geometry>
+                    <box size="${size}" />
+                </geometry>
+                <material name="silver">
+                    <color rgba="0.75 0.75 0.75 1"/>
+                </material>
+            </collision>
+            
+            <visual>
+                <origin rpy="${origin_rpy}" xyz="${origin_xyz}" />
+                <geometry>
+                    <box size="${size}" />
+                </geometry>
+                <material name="silver">
+                    <color rgba="0.75 0.75 0.75 1"/>
+                </material>
+            </visual>
+        </link>
+    </xacro:macro> 
+</robot>

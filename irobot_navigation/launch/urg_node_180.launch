@@ -1,0 +1,19 @@
+<launch>
+
+<!-- urg_node range of 180 degree -->
+<node name="urg_node" pkg="urg_node" type="urg_node" output="screen">
+    <param name="ip_address" value=""/>
+    <param name="serial_port" value="/dev/ttyACM1"/>
+    <param name="serial_baud" value="115200"/>
+    <param name="frame_id" value="robot_1/laser"/>
+    <param name="calibrate_time" value="true"/>
+    <param name="publish_intensity" value="false"/>
+    <param name="publish_multiecho" value="false"/>
+    <param name="angle_min" value="-1.5707963"/>
+    <param name="angle_max" value="1.5707963"/>
+</node>
+
+<!-- tf -->
+<node pkg="tf" type="static_transform_publisher" name="link3_broadcaster" args="0 0 0 0 0 0 robot_1/base_link robot_1/laser 100"/>
+
+</launch>
