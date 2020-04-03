@@ -1,9 +1,0 @@
-<launch>
-
-<!-- odom + imu -->
-<include file="/home/robot/catkin_ws/src/irobot_navigation/launch/imu_odom.launch"/>
-
-<!-- laser scanner -->
-<include file="/home/robot/catkin_ws/src/irobot_navigation/launch/urg_node_180.launch"/>
-
-</launch>
