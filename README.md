@@ -4,4 +4,4 @@ This repesitory consists all the codes in project hybrid steel bridge inspection
 - Worming transformation: completed.
 - Magnetic Array Control: Completed.
 - Ongoing work: build a new structure for robot working automatically - integrating and Adjusting, (RGB image - ANet network, adjusting control framework)
-
+- Video: https://www.youtube.com/watch?v=dQrboJsqyDE
